@@ -1,0 +1,6 @@
+{
+  "name": "Ced's Books",
+  "description": "A clean, modern personal book archive and reading collection with ratings, reading statuses, and an admin management interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
