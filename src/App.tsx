@@ -35,7 +35,7 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_KEYS.BOOKS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.error('Error reading books from localStorage:', e);
@@ -296,7 +296,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50/70 via-slate-50 to-blue-50/40 text-slate-900 selection:bg-blue-100 selection:text-blue-900 relative">
+    <div className="star-surface min-h-screen flex flex-col text-slate-900 selection:bg-blue-100 selection:text-blue-900 relative">
       {/* Public Navigation Bar */}
       <Navbar
         currentView={view}

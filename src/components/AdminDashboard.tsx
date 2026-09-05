@@ -213,7 +213,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const avgRating = books.length > 0 ? (books.reduce((acc, b) => acc + b.rating, 0) / books.length).toFixed(1) : '0.0';
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 pb-16">
+    <div className="star-surface min-h-screen text-slate-900 pb-16">
       {/* =========================================================================
           MAIN ADMIN HEADER BAR (Spans the very top of the admin portal page)
           ========================================================================= */}
