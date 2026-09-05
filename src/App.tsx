@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Book, ReadingStatus, SortOption, StarDesignStyle } from './types';
 import { INITIAL_BOOKS } from './data/initialBooks';
+import { supabase } from './lib/supabase';
 import { Navbar } from './components/Navbar';
 import { BookCard } from './components/BookCard';
 import { BookFilters } from './components/BookFilters';
@@ -29,6 +30,10 @@ const STORAGE_KEYS = {
 };
 
 export default function App() {
+  const isSupabaseConfigured = Boolean(
+    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+  );
+
   // --- Persistent State ---
   const [books, setBooks] = useState<Book[]>(() => {
     try {
@@ -42,6 +47,41 @@ export default function App() {
     }
     return INITIAL_BOOKS;
   });
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const fetchBooks = async () => {
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching books from Supabase:', error);
+        return;
+      }
+
+      const mappedBooks: Book[] = (data ?? []).map((book) => ({
+        id: String(book.id),
+        title: String(book.title ?? ''),
+        author: String(book.author ?? ''),
+        coverUrl: String(book.cover_url ?? ''),
+        rating: Number(book.rating ?? 0),
+        status: (book.status as ReadingStatus) ?? 'want-to-read',
+        review: typeof book.review === 'string' ? book.review : '',
+        date: typeof book.date === 'string' ? book.date : new Date().toISOString().slice(0, 10),
+        genre: typeof book.genre === 'string' ? book.genre : '',
+        pages: typeof book.pages === 'number' ? book.pages : undefined,
+        favoriteQuote: typeof book.favorite_quote === 'string' ? book.favorite_quote : '',
+      }));
+
+      setBooks(mappedBooks);
+      localStorage.setItem(STORAGE_KEYS.BOOKS, JSON.stringify(mappedBooks));
+    };
+
+    fetchBooks();
+  }, [isSupabaseConfigured]);
 
   const [adminPassword, setAdminPassword] = useState<string>(() => {
     try {
@@ -240,7 +280,28 @@ export default function App() {
     setView('home');
   };
 
-  const handleSaveBook = (savedBook: Book) => {
+  const handleSaveBook = async (savedBook: Book) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('books').upsert({
+        id: savedBook.id,
+        title: savedBook.title,
+        author: savedBook.author,
+        cover_url: savedBook.coverUrl,
+        rating: savedBook.rating,
+        status: savedBook.status,
+        review: savedBook.review ?? '',
+        date: savedBook.date,
+        genre: savedBook.genre ?? '',
+        pages: savedBook.pages ?? null,
+        favorite_quote: savedBook.favoriteQuote ?? '',
+      });
+
+      if (error) {
+        console.error('Error saving book to Supabase:', error);
+        return;
+      }
+    }
+
     setBooks((prev) => {
       const idx = prev.findIndex((b) => b.id === savedBook.id);
       if (idx >= 0) {
@@ -257,7 +318,16 @@ export default function App() {
     }
   };
 
-  const handleDeleteBook = (bookId: string) => {
+  const handleDeleteBook = async (bookId: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('books').delete().eq('id', bookId);
+
+      if (error) {
+        console.error('Error deleting book from Supabase:', error);
+        return;
+      }
+    }
+
     setBooks((prev) => prev.filter((b) => b.id !== bookId));
     if (selectedBook?.id === bookId) {
       setSelectedBook(null);
