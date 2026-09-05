@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Book, ReadingStatus, SortOption, StarDesignStyle } from './types';
+import { Book, CollectionFormat, MediaType, ReadingStatus, SortOption, StarDesignStyle, ThemeMode } from './types';
 import { INITIAL_BOOKS } from './data/initialBooks';
 import { supabase } from './lib/supabase';
 import { Navbar } from './components/Navbar';
@@ -27,6 +27,7 @@ const STORAGE_KEYS = {
   PASSWORD: 'personal_admin_password_v1',
   AUTH: 'personal_admin_auth_v1',
   STAR_STYLE: 'personal_star_style_v1',
+  THEME: 'personal_theme_v1',
 };
 
 export default function App() {
@@ -69,9 +70,15 @@ export default function App() {
         author: String(book.author ?? ''),
         coverUrl: String(book.cover_url ?? ''),
         rating: Number(book.rating ?? 0),
+        timesConsumed: Number(book.times_consumed ?? 0),
         status: (book.status as ReadingStatus) ?? 'want-to-read',
+        mediaType: (book.media_type as MediaType) ?? 'book',
+        format: (book.format as CollectionFormat) ?? 'physical',
+        hasDuplicate: Boolean(book.has_duplicate),
         review: typeof book.review === 'string' ? book.review : '',
         date: typeof book.date === 'string' ? book.date : new Date().toISOString().slice(0, 10),
+        dateStarted: typeof book.date_started === 'string' ? book.date_started : undefined,
+        dateFinished: typeof book.date_finished === 'string' ? book.date_finished : undefined,
         genre: typeof book.genre === 'string' ? book.genre : '',
         pages: typeof book.pages === 'number' ? book.pages : undefined,
         favoriteQuote: typeof book.favorite_quote === 'string' ? book.favorite_quote : '',
@@ -139,6 +146,20 @@ export default function App() {
     } catch {}
   }, [starStyle]);
 
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.THEME) === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    } catch {}
+  }, [theme]);
+
   // --- Views and Modal States ---
   const [view, setView] = useState<'home' | 'book-detail' | 'admin'>('home');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -153,11 +174,32 @@ export default function App() {
   const [sortBy, setSortBy] = useState<SortOption>('rating-desc');
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [mediaType, setMediaType] = useState<MediaType>('book');
+  const mediaLabel = mediaType === 'book' ? 'Books' : mediaType === 'movie' ? 'Movies' : 'Shows';
+  const watchedLabel = mediaType === 'book' ? 'Read' : 'Watched';
+  const activeLabel = mediaType === 'book' ? 'Active' : 'Watching';
+
+  const visibleBooks = useMemo(() => {
+    return books.flatMap((book) => {
+      const normalizedBook = { ...book, mediaType: book.mediaType ?? 'book' } as Book;
+      if (!normalizedBook.hasDuplicate || normalizedBook.isDuplicate) return [normalizedBook];
+      return [
+        normalizedBook,
+        {
+          ...normalizedBook,
+          id: `${normalizedBook.id}-duplicate`,
+          isDuplicate: true,
+          duplicateOfId: normalizedBook.id,
+          hasDuplicate: false,
+        },
+      ];
+    });
+  }, [books]);
 
   // Extract all unique authors with counts for filter (e.g. "Adam Silvera (8)")
   const authorsWithCounts = useMemo(() => {
     const countsMap = new Map<string, number>();
-    books.forEach((b) => {
+    visibleBooks.filter((book) => book.mediaType === mediaType).forEach((b) => {
       if (b.author) {
         const name = b.author.trim();
         countsMap.set(name, (countsMap.get(name) || 0) + 1);
@@ -166,22 +208,24 @@ export default function App() {
     return Array.from(countsMap.entries())
       .map(([author, count]) => ({ author, count }))
       .sort((a, b) => a.author.localeCompare(b.author));
-  }, [books]);
+  }, [visibleBooks, mediaType]);
 
   // Status counts for tabs
   const statusCounts = useMemo(() => {
     return {
-      all: books.length,
-      read: books.filter((b) => b.status === 'read').length,
-      reading: books.filter((b) => b.status === 'reading').length,
-      'want-to-read': books.filter((b) => b.status === 'want-to-read').length,
+      all: visibleBooks.filter((b) => b.mediaType === mediaType).length,
+      read: visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'read').length,
+      reading: visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'reading').length,
+      'want-to-read': visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'want-to-read').length,
+      void: visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'void').length,
     };
-  }, [books]);
+  }, [visibleBooks, mediaType]);
 
   // Combined Filtering & Sorting logic
   const filteredAndSortedBooks = useMemo(() => {
-    return books
+    return visibleBooks
       .filter((book) => {
+        if (book.mediaType !== mediaType) return false;
         // Status filter
         if (statusFilter !== 'all' && book.status !== statusFilter) {
           return false;
@@ -289,9 +333,15 @@ export default function App() {
         author: savedBook.author,
         cover_url: savedBook.coverUrl,
         rating: savedBook.rating,
+        times_consumed: savedBook.timesConsumed ?? 0,
         status: savedBook.status,
+        media_type: savedBook.mediaType ?? 'book',
+        format: savedBook.format ?? 'physical',
+        has_duplicate: Boolean(savedBook.hasDuplicate),
         review: savedBook.review ?? '',
         date: savedBook.date,
+        date_started: savedBook.dateStarted ?? null,
+        date_finished: savedBook.dateFinished ?? null,
         genre: savedBook.genre ?? '',
         pages: savedBook.pages ?? null,
         favorite_quote: savedBook.favoriteQuote ?? '',
@@ -362,12 +412,14 @@ export default function App() {
         onResetBooks={() => setBooks(INITIAL_BOOKS)}
         onImportBooks={(newBooks) => setBooks(newBooks)}
         initialEditingBook={editingBook}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
       />
     );
   }
 
   return (
-    <div className="star-surface min-h-screen flex flex-col text-slate-900 selection:bg-blue-100 selection:text-blue-900 relative">
+    <div className={`app-theme-${theme} star-surface min-h-screen flex flex-col text-slate-900 selection:bg-blue-100 selection:text-blue-900 relative`}>
       {/* Public Navigation Bar */}
       <Navbar
         currentView={view}
@@ -377,6 +429,8 @@ export default function App() {
         }}
         onOpenAdmin={handleOpenAdmin}
         isAdminAuthenticated={isAdminAuthenticated}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
       />
 
       {/* Password Authentication Modal */}
@@ -394,7 +448,7 @@ export default function App() {
       {view === 'book-detail' && selectedBook ? (
         <BookDetailPage
           book={selectedBook}
-          allBooks={books}
+          allBooks={visibleBooks.filter((item) => item.mediaType === mediaType)}
           onBack={() => {
             setView('home');
             setSelectedBook(null);
@@ -416,15 +470,23 @@ export default function App() {
       ) : (
         /* PUBLIC MAIN BOOK REVIEWS VIEW */
         <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 relative z-10">
-          {/* Clean Minimalist Header */}
-          <div className="flex items-center gap-2 mb-3 sm:mb-5 pt-1 sm:pt-2">
-            <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 font-serif-title">
-              Book Reviews & Books
-            </h1>
-          </div>
-
           {/* Filters & Sorting Bar */}
           <div id="bookshelf">
+            <div className="media-tabs mb-3 sm:mb-4" role="tablist" aria-label="Archive type">
+              {(['book', 'movie', 'show'] as MediaType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  role="tab"
+                  aria-selected={mediaType === type}
+                  onClick={() => { setMediaType(type); setStatusFilter('all'); setSelectedAuthor('all'); }}
+                  className={`media-tab ${mediaType === type ? 'media-tab-active' : ''}`}
+                >
+                  {type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
+                  <span>{visibleBooks.filter((book) => book.mediaType === type).length}</span>
+                </button>
+              ))}
+            </div>
             <BookFilters
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
@@ -438,6 +500,7 @@ export default function App() {
               statusCounts={statusCounts}
               totalFilteredCount={filteredAndSortedBooks.length}
               onResetFilters={handleResetFilters}
+              mediaType={mediaType}
             />
           </div>
 
@@ -448,11 +511,11 @@ export default function App() {
                 <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <h3 className="font-serif-title text-base sm:text-lg font-bold text-slate-900 mb-1">
-                No Books Found
+                No Entries Found
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mb-4 sm:mb-6">
-                No books match your current filters or search term. Try resetting your filters or
-                adding a new book entry.
+                No entries match your current filters or search term. Try resetting your filters or
+                adding a new archive entry.
               </p>
               <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                 <button
@@ -468,7 +531,7 @@ export default function App() {
                   className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add First Book</span>
+                  <span>Add First Entry</span>
                 </button>
               </div>
             </div>
@@ -497,7 +560,7 @@ export default function App() {
       <footer className="mt-auto h-14 border-t border-slate-200 bg-white shrink-0 flex items-center px-4 sm:px-8">
         <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">
-            Collection: {books.length} Titles | Read: {statusCounts.read} | Active: {statusCounts.reading} | Wishlist: {statusCounts['want-to-read']}
+            {mediaLabel}: {visibleBooks.filter((book) => book.mediaType === mediaType).length} Titles | {watchedLabel}: {statusCounts.read} | {activeLabel}: {statusCounts.reading} | Wishlist: {statusCounts['want-to-read']}
           </p>
 
           <div className="flex items-center gap-4 text-[10px]">
@@ -521,7 +584,7 @@ export default function App() {
             </button>
             <span className="text-slate-300">•</span>
             <p className="text-blue-600 font-bold tracking-widest uppercase flex items-center">
-              <span>Ced's Books</span>
+              <span>Ced's Archives</span>
             </p>
           </div>
         </div>

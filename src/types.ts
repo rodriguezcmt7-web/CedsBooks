@@ -1,4 +1,7 @@
-export type ReadingStatus = 'want-to-read' | 'reading' | 'read';
+export type ReadingStatus = 'want-to-read' | 'reading' | 'read' | 'void';
+export type MediaType = 'book' | 'movie' | 'show';
+export type CollectionFormat = 'physical' | 'ebook';
+export type ThemeMode = 'light' | 'dark';
 
 export interface Book {
   id: string;
@@ -6,9 +9,17 @@ export interface Book {
   author: string;
   coverUrl: string;
   rating: number; // 1 to 5
+  timesConsumed?: number;
   status: ReadingStatus;
+  mediaType?: MediaType;
+  format?: CollectionFormat;
+  hasDuplicate?: boolean;
+  isDuplicate?: boolean;
+  duplicateOfId?: string;
   review?: string;
   date: string; // ISO date string or formatted (YYYY-MM-DD)
+  dateStarted?: string;
+  dateFinished?: string;
   genre?: string;
   pages?: number;
   favoriteQuote?: string;

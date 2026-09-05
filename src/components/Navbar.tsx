@@ -1,11 +1,14 @@
 import React from 'react';
-import { BookOpen, Lock, Unlock } from 'lucide-react';
+import { Star, Lock, Unlock, Moon, Sun } from 'lucide-react';
+import { ThemeMode } from '../types';
 
 interface NavbarProps {
   currentView: 'home' | 'book-detail' | 'admin';
   onNavigateHome: () => void;
   onOpenAdmin: () => void;
   isAdminAuthenticated: boolean;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -13,6 +16,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateHome,
   onOpenAdmin,
   isAdminAuthenticated,
+  theme,
+  onToggleTheme,
 }) => {
   return (
     <nav className="sticky top-0 z-40 h-13 sm:h-16 flex items-center justify-between px-3 sm:px-8 bg-white/95 backdrop-blur-xs border-b border-blue-100/80 shrink-0 shadow-xs">
@@ -25,21 +30,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="flex items-center gap-2 sm:gap-2.5 text-left group cursor-pointer focus:outline-none"
         >
           <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-tr from-blue-700 to-blue-500 rounded-lg flex items-center justify-center text-white shadow-xs shadow-blue-200">
-            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+            <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white fill-white" />
           </div>
 
           <div className="flex items-baseline gap-1.5 sm:gap-2">
             <span className="text-base sm:text-xl font-bold tracking-tight text-slate-900 font-serif-title">
-              Ced's Books
+              Ced's Archives
             </span>
             <span className="hidden sm:inline text-xs text-slate-400 font-medium">
-              Personal Book Archive
+              Personal Media Archive
             </span>
           </div>
         </button>
 
         {/* Right Navigation: Clean Admin Access */}
         <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium">
+          <button type="button" onClick={onToggleTheme} className="theme-toggle" aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+            {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+          </button>
           {/* Admin Pill Button */}
           <button
             type="button"

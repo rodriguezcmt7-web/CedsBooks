@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Book, ReadingStatus, StarDesignStyle } from '../types';
+import { Book, MediaType, ReadingStatus, StarDesignStyle, ThemeMode } from '../types';
 import { ModernStars } from './ModernStars';
 import { BookEntryModal } from './BookEntryModal';
 import {
@@ -24,6 +24,8 @@ import {
   Sliders,
   Check,
   BookOpen,
+  Moon,
+  Sun,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -40,6 +42,8 @@ interface AdminDashboardProps {
   onImportBooks: (books: Book[]) => void;
   initialEditingBook?: Book | null;
   initialTab?: 'collection' | 'settings';
+  theme: ThemeMode;
+  onToggleTheme: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -56,6 +60,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onImportBooks,
   initialEditingBook = null,
   initialTab = 'collection',
+  theme,
+  onToggleTheme,
 }) => {
   const [activeTab, setActiveTab] = useState<'collection' | 'settings'>(initialTab);
 
@@ -65,6 +71,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Search in Admin
   const [adminSearch, setAdminSearch] = useState('');
+  const [activeMediaType, setActiveMediaType] = useState<MediaType>('book');
 
   // Delete Confirmation modal
   const [deletingBook, setDeletingBook] = useState<Book | null>(null);
@@ -202,6 +209,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Filter books in admin list
   const filteredBooks = books.filter(
     (b) =>
+      (b.mediaType ?? 'book') === activeMediaType &&
       b.title.toLowerCase().includes(adminSearch.toLowerCase()) ||
       b.author.toLowerCase().includes(adminSearch.toLowerCase()) ||
       b.status.toLowerCase().includes(adminSearch.toLowerCase())
@@ -213,7 +221,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const avgRating = books.length > 0 ? (books.reduce((acc, b) => acc + b.rating, 0) / books.length).toFixed(1) : '0.0';
 
   return (
-    <div className="star-surface min-h-screen text-slate-900 pb-16">
+    <div className={`app-theme-${theme} star-surface min-h-screen text-slate-900 pb-16`}>
       {/* =========================================================================
           MAIN ADMIN HEADER BAR (Spans the very top of the admin portal page)
           ========================================================================= */}
@@ -227,7 +235,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-serif-title">
-                  <span>Ced's Books</span>
+                  <span>Ced's Archives</span>
                   <span className="text-slate-400 font-normal text-xs font-sans">Admin Portal</span>
                 </h1>
                 <span className="text-[10px] font-mono uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30 px-1.5 py-0.5 rounded font-semibold">
@@ -263,8 +271,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* Sub-navigation Tabs */}
+        {/* Media tabs */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 border-t border-slate-800/80 pt-1">
+          <div className="flex overflow-x-auto gap-2">
+            {(['book', 'movie', 'show'] as MediaType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setActiveMediaType(type)}
+                className={`cursor-pointer px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg transition-colors border-b-2 ${
+                  activeMediaType === type
+                    ? 'border-blue-400 text-blue-300 bg-slate-800/60'
+                    : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
+                }`}
+              >
+                {type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
+                <span className="ml-1.5 opacity-70">({books.filter((book) => (book.mediaType ?? 'book') === type).length})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Admin navigation */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex overflow-x-auto gap-2 border-t border-slate-800/80 pt-1">
+          <button type="button" onClick={onToggleTheme} className="theme-toggle ml-auto self-center" aria-label="Toggle theme" title="Toggle theme">
+            {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+          </button>
           <button
             type="button"
             id="tab-manage-books"
@@ -276,7 +308,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }`}
           >
             <Library className="w-4 h-4" />
-            <span>Collection ({books.length})</span>
+                    <span>Entries ({books.length})</span>
           </button>
 
           <button
@@ -309,7 +341,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="w-full max-w-md bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-200">
             <div className="flex items-center gap-2.5 text-red-600 mb-2">
               <AlertTriangle className="w-5 h-5" />
-              <h4 className="text-base font-bold text-slate-900">Delete Book Review?</h4>
+              <h4 className="text-base font-bold text-slate-900">Delete Archive Entry?</h4>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">
               Are you sure you want to delete{' '}
@@ -409,11 +441,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <h2 className="text-lg sm:text-xl font-bold font-serif-title text-slate-900">
-                    Book Collection
+                    Entry Archives
                   </h2>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Manage reviews, adjust ratings, update reading status, or add new titles.
+                  Manage entries, adjust ratings, update status, or add new titles.
                 </p>
               </div>
 
@@ -422,7 +454,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
-                    placeholder="Search books..."
+                    placeholder="Search entries..."
                     value={adminSearch}
                     onChange={(e) => setAdminSearch(e.target.value)}
                     className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -436,7 +468,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>New Book Entry</span>
+                  <span>New Entry</span>
                 </button>
               </div>
             </div>
@@ -447,7 +479,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                      <th className="py-2.5 px-3 sm:px-4">Book</th>
+                      <th className="py-2.5 px-3 sm:px-4">Entry</th>
                       <th className="py-2.5 px-3 sm:px-4">Rating</th>
                       <th className="py-2.5 px-3 sm:px-4">Status</th>
                       <th className="py-2.5 px-3 sm:px-4 hidden sm:table-cell">Date Recorded</th>
@@ -458,7 +490,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {filteredBooks.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-10 text-center text-slate-400 text-xs">
-                          No books match your search.
+                          No entries match your search.
                         </td>
                       </tr>
                     ) : (
@@ -516,9 +548,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               }}
                               className="text-[11px] sm:text-xs font-semibold px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                              <option value="want-to-read">Want to Read</option>
+                              <option value="want-to-read">Want</option>
                               <option value="reading">Reading</option>
                               <option value="read">Read</option>
+                              <option value="void">The Void</option>
                             </select>
                           </td>
 

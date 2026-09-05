@@ -1,5 +1,5 @@
 import React from 'react';
-import { ReadingStatus, SortOption } from '../types';
+import { MediaType, ReadingStatus, SortOption } from '../types';
 import { Search, X } from 'lucide-react';
 
 export interface AuthorWithCount {
@@ -22,9 +22,11 @@ interface BookFiltersProps {
     'want-to-read': number;
     reading: number;
     read: number;
+    void: number;
   };
   totalFilteredCount: number;
   onResetFilters: () => void;
+  mediaType: MediaType;
 }
 
 export const BookFilters: React.FC<BookFiltersProps> = ({
@@ -40,7 +42,13 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
   statusCounts,
   totalFilteredCount,
   onResetFilters,
+  mediaType,
 }) => {
+  const isVideo = mediaType !== 'book';
+  const personLabel = isVideo ? 'Director' : 'Author';
+  const statusLabels = isVideo
+    ? { read: 'Watched', reading: 'Watching', want: 'Want' }
+    : { read: 'Read', reading: 'Reading', want: 'Want' };
   const isFiltered =
     statusFilter !== 'all' ||
     selectedAuthor !== 'all' ||
@@ -56,9 +64,10 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
           {(
             [
               { key: 'all', label: 'All', count: statusCounts.all },
-              { key: 'read', label: 'Read', count: statusCounts.read },
-              { key: 'reading', label: 'Reading', count: statusCounts.reading },
-              { key: 'want-to-read', label: 'Want', count: statusCounts['want-to-read'] },
+              { key: 'read', label: statusLabels.read, count: statusCounts.read },
+              { key: 'reading', label: statusLabels.reading, count: statusCounts.reading },
+              { key: 'want-to-read', label: statusLabels.want, count: statusCounts['want-to-read'] },
+              { key: 'void', label: 'The Void', count: statusCounts.void },
             ] as const
           ).map((tab) => {
             const isActive = statusFilter === tab.key;
@@ -97,7 +106,7 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
             id="search-input"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search titles or authors..."
+            placeholder={`Search titles or ${personLabel.toLowerCase()}s...`}
             className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 text-slate-700"
           />
           {searchQuery && (
@@ -125,8 +134,8 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
             >
               <option value="rating-desc">Sort: Highest Rated</option>
               <option value="rating-asc">Sort: Lowest Rated</option>
-              <option value="author-asc">Sort: Author A-Z</option>
-              <option value="author-desc">Sort: Author Z-A</option>
+              <option value="author-asc">Sort: {personLabel} A-Z</option>
+              <option value="author-desc">Sort: {personLabel} Z-A</option>
               <option value="title-asc">Sort: Title A-Z</option>
               <option value="date-desc">Sort: Most Recent</option>
             </select>
@@ -140,7 +149,7 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
               onChange={(e) => onAuthorChange(e.target.value)}
               className="w-full bg-white border border-slate-200 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 cursor-pointer sm:max-w-[240px] truncate"
             >
-              <option value="all">All Authors</option>
+              <option value="all">All {personLabel}s</option>
               {authorsWithCount.map(({ author, count }) => (
                 <option key={author} value={author}>
                   {author} ({count})
@@ -168,7 +177,7 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
           )}
 
           <div className="text-[11px] sm:text-xs text-slate-400 font-medium whitespace-nowrap">
-            <strong className="text-slate-800 font-bold">{totalFilteredCount}</strong> books
+            <strong className="text-slate-800 font-bold">{totalFilteredCount}</strong> entries
           </div>
         </div>
       </div>

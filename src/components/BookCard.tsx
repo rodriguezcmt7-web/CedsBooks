@@ -2,7 +2,7 @@ import React from 'react';
 import { Book, StarDesignStyle } from '../types';
 import { ModernStars } from './ModernStars';
 import { StatusBadge } from './StatusBadge';
-import { Calendar, Quote, ChevronRight, Star } from 'lucide-react';
+import { Calendar, Quote, ChevronRight, Star, Copy, Smartphone, BookOpen } from 'lucide-react';
 
 interface BookCardProps {
   book: Book;
@@ -58,7 +58,7 @@ export const BookCard: React.FC<BookCardProps> = ({
 
         {/* Status Badge overlay on top-right */}
         <div className="absolute top-1.5 sm:top-3 right-1.5 sm:right-3 z-10 scale-85 sm:scale-100 origin-top-right">
-          <StatusBadge status={book.status} size="sm" />
+          <StatusBadge status={book.status} mediaType={book.mediaType} size="sm" />
         </div>
 
         {/* Rating overlay badge on top-left */}
@@ -66,13 +66,23 @@ export const BookCard: React.FC<BookCardProps> = ({
           <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600 fill-blue-600" />
           <span>{book.rating}.0</span>
         </div>
+        <div className="absolute bottom-1.5 sm:bottom-3 left-1.5 sm:left-3 z-10 archive-label">
+          {book.format === 'ebook' ? <Smartphone className="w-2.5 h-2.5" /> : <BookOpen className="w-2.5 h-2.5" />}
+          <span>{book.format === 'ebook' ? 'E-book' : 'Physical'}</span>
+        </div>
+        {book.isDuplicate && (
+          <div className="absolute bottom-1.5 sm:bottom-3 right-1.5 sm:right-3 z-10 archive-label">
+            <Copy className="w-2.5 h-2.5" />
+            <span>Duplicate</span>
+          </div>
+        )}
       </div>
 
       {/* Book Information Section */}
       <div className="flex-1 flex flex-col">
         {/* Title & Author */}
         <div className="mb-0.5 sm:mb-1">
-          <h3 className="font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors line-clamp-1 text-xs sm:text-base">
+          <h3 className="font-bold text-slate-900 leading-tight text-center group-hover:text-blue-600 transition-colors line-clamp-1 text-xs sm:text-base">
             {book.title}
           </h3>
         </div>

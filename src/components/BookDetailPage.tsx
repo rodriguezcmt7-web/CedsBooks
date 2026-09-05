@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Copy,
+  Smartphone,
 } from 'lucide-react';
 
 interface BookDetailPageProps {
@@ -152,7 +154,16 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
               <div className="w-full max-w-[280px] sm:max-w-[300px] mt-3 sm:mt-6 p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-2 sm:gap-3 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500 font-medium">Reading Status</span>
-                  <StatusBadge status={book.status} size="sm" />
+                  <StatusBadge status={book.status} mediaType={book.mediaType} size="sm" />
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Edition</span>
+                  <span className="archive-inline-label">
+                    {book.format === 'ebook' ? <Smartphone className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
+                    {book.format === 'ebook' ? 'E-book' : 'Physical'}
+                    {book.isDuplicate ? <><Copy className="w-3 h-3 ml-1" /> Duplicate</> : null}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
@@ -164,9 +175,27 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                  <span className="text-slate-500 font-medium">Times Read / Watched</span>
+                  <span className="text-slate-700 font-semibold">{book.timesConsumed ?? 0}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
                   <span className="text-slate-500 font-medium">Date Recorded</span>
                   <span className="text-slate-700 font-semibold">{formattedDate}</span>
                 </div>
+
+                {book.dateStarted && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Started</span>
+                    <span className="text-slate-700 font-semibold">{book.dateStarted}</span>
+                  </div>
+                )}
+                {book.dateFinished && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Finished</span>
+                    <span className="text-slate-700 font-semibold">{book.dateFinished}</span>
+                  </div>
+                )}
 
                 {book.pages && (
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
@@ -197,7 +226,7 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
                   {book.rating} out of 5 Stars
                 </span>
                 <span className="text-[11px] sm:text-xs text-blue-600 font-semibold ml-auto flex items-center gap-1">
-                  Book Entry
+                  {book.mediaType === 'movie' ? 'Movie Entry' : book.mediaType === 'show' ? 'Show Entry' : 'Book Entry'}
                 </span>
               </div>
 
