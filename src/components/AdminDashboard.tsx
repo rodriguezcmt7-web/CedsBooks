@@ -667,8 +667,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               className="text-[11px] sm:text-xs font-semibold px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
                               <option value="want-to-read">Want</option>
-                              <option value="reading">Reading</option>
-                              <option value="read">Read</option>
+                              <option value="reading">{book.mediaType === 'book' || !book.mediaType ? 'Reading' : 'Watching'}</option>
+                              <option value="read">{book.mediaType === 'book' || !book.mediaType ? 'Read' : 'Watched'}</option>
                               <option value="void">The Void</option>
                             </select>
                           </td>

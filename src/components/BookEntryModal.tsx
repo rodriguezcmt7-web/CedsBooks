@@ -122,9 +122,6 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
   const [finishedYear, setFinishedYear] = useState('');
   const [finishedMonth, setFinishedMonth] = useState('');
   const [finishedDay, setFinishedDay] = useState('');
-  const [recordedYear, setRecordedYear] = useState('');
-  const [recordedMonth, setRecordedMonth] = useState('');
-  const [recordedDay, setRecordedDay] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,12 +137,8 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
       setMediaType(bookToEdit.mediaType ?? 'book');
       setFormat(bookToEdit.format ?? 'physical');
       setHasDuplicate(Boolean(bookToEdit.hasDuplicate));
-      const recordedDate = getDateParts(bookToEdit.date);
       const startedDate = getDateParts(bookToEdit.dateStarted ?? '');
       const finishedDate = getDateParts(bookToEdit.dateFinished ?? '');
-      setRecordedYear(recordedDate.year);
-      setRecordedMonth(recordedDate.month);
-      setRecordedDay(recordedDate.day);
       setStartedYear(startedDate.year);
       setStartedMonth(startedDate.month);
       setStartedDay(startedDate.day);
@@ -162,9 +155,6 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
       setMediaType('book');
       setFormat('physical');
       setHasDuplicate(false);
-      setRecordedYear('');
-      setRecordedMonth('');
-      setRecordedDay('');
       setStartedYear('');
       setStartedMonth('');
       setStartedDay('');
@@ -211,14 +201,9 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
       setErrorMsg('Please enter the author name.');
       return;
     }
-    const recordedDate = composePartialDate(recordedYear, recordedMonth, recordedDay);
     const startedDate = composePartialDate(startedYear, startedMonth, startedDay);
     const finishedDate = composePartialDate(finishedYear, finishedMonth, finishedDay);
     const hasDateParts = (year: string, month: string, day: string) => year || month || day;
-    if (hasDateParts(recordedYear, recordedMonth, recordedDay) && !/^\d{4}$/.test(recordedYear)) {
-      setErrorMsg('Recorded date needs a four-digit year.');
-      return;
-    }
     if (hasDateParts(startedYear, startedMonth, startedDay) && !/^\d{4}$/.test(startedYear)) {
       setErrorMsg('Started date needs a four-digit year.');
       return;
@@ -227,7 +212,7 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
       setErrorMsg('Finished date needs a four-digit year.');
       return;
     }
-    if ((startedDay && !startedMonth) || (finishedDay && !finishedMonth) || (recordedDay && !recordedMonth)) {
+    if ((startedDay && !startedMonth) || (finishedDay && !finishedMonth)) {
       setErrorMsg('Choose a month before entering a day.');
       return;
     }
@@ -251,7 +236,7 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
       isDuplicate: bookToEdit?.isDuplicate,
       duplicateOfId: bookToEdit?.duplicateOfId,
       review: bookToEdit?.review,
-      date: recordedDate,
+      date: bookToEdit?.date || new Date().toISOString().slice(0, 10),
       dateStarted: startedDate || undefined,
       dateFinished: finishedDate || undefined,
       genre: bookToEdit?.genre,
@@ -549,7 +534,7 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
           </div>
 
           {/* Reading Timeline */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
             <DatePartsFields
               label="Date Started"
               prefix="book-date-started"
@@ -569,16 +554,6 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
               onYearChange={setFinishedYear}
               onMonthChange={setFinishedMonth}
               onDayChange={setFinishedDay}
-            />
-            <DatePartsFields
-              label="Date Recorded"
-              prefix="book-entry-date"
-              year={recordedYear}
-              month={recordedMonth}
-              day={recordedDay}
-              onYearChange={setRecordedYear}
-              onMonthChange={setRecordedMonth}
-              onDayChange={setRecordedDay}
             />
           </div>
 
