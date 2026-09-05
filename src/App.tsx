@@ -49,10 +49,11 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !supabase) return;
+    const client = supabase;
 
     const fetchBooks = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('books')
         .select('*')
         .order('date', { ascending: false });
@@ -281,7 +282,7 @@ export default function App() {
   };
 
   const handleSaveBook = async (savedBook: Book) => {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.from('books').upsert({
         id: savedBook.id,
         title: savedBook.title,
@@ -319,7 +320,7 @@ export default function App() {
   };
 
   const handleDeleteBook = async (bookId: string) => {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.from('books').delete().eq('id', bookId);
 
       if (error) {
