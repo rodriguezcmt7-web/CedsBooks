@@ -39,8 +39,15 @@ const DatePartsFields: React.FC<DatePartsFieldsProps> = ({
   onMonthChange,
   onDayChange,
 }) => {
-  const numericValue = (value: string, maxLength: number) =>
-    value.replace(/\D/g, '').slice(0, maxLength);
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1899 }, (_, index) => String(currentYear - index));
+  const months = [
+    ['01', 'January'], ['02', 'February'], ['03', 'March'], ['04', 'April'],
+    ['05', 'May'], ['06', 'June'], ['07', 'July'], ['08', 'August'],
+    ['09', 'September'], ['10', 'October'], ['11', 'November'], ['12', 'December'],
+  ];
+  const days = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, '0'));
+  const selectClass = 'w-full px-2.5 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium';
 
   return (
     <div>
@@ -49,39 +56,36 @@ const DatePartsFields: React.FC<DatePartsFieldsProps> = ({
         <span>{label}</span>
       </label>
       <div className="grid grid-cols-3 gap-1.5">
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={4}
+        <select
           id={`${prefix}-year`}
-          placeholder="Year"
           aria-label={`${label} year`}
           value={year}
-          onChange={(e) => onYearChange(numericValue(e.target.value, 4))}
-          className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium"
-        />
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={2}
+          onChange={(e) => onYearChange(e.target.value)}
+          className={selectClass}
+        >
+          <option value=""></option>
+          {years.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+        <select
           id={`${prefix}-month`}
-          placeholder="Month"
           aria-label={`${label} month`}
           value={month}
-          onChange={(e) => onMonthChange(numericValue(e.target.value, 2))}
-          className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium"
-        />
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={2}
+          onChange={(e) => onMonthChange(e.target.value)}
+          className={selectClass}
+        >
+          <option value=""></option>
+          {months.map(([value, name]) => <option key={value} value={value}>{name}</option>)}
+        </select>
+        <select
           id={`${prefix}-day`}
-          placeholder="Day"
           aria-label={`${label} day`}
           value={day}
-          onChange={(e) => onDayChange(numericValue(e.target.value, 2))}
-          className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium"
-        />
+          onChange={(e) => onDayChange(e.target.value)}
+          className={selectClass}
+        >
+          <option value=""></option>
+          {days.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
       </div>
       <p className="text-[10px] text-slate-400 mt-1">Month and day are optional.</p>
     </div>

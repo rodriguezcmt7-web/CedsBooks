@@ -1,5 +1,6 @@
 export type ReadingStatus = 'want-to-read' | 'reading' | 'read' | 'void';
 export type MediaType = 'book' | 'movie' | 'show';
+export type MediaTab = MediaType | 'all';
 export type CollectionFormat = 'physical' | 'ebook';
 export type ThemeMode = 'light' | 'dark';
 

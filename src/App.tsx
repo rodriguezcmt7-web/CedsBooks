@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Book, CollectionFormat, MediaType, ReadingStatus, SortOption, StarDesignStyle, ThemeMode } from './types';
+import { Book, CollectionFormat, MediaTab, MediaType, ReadingStatus, SortOption, StarDesignStyle, ThemeMode } from './types';
 import { INITIAL_BOOKS } from './data/initialBooks';
 import { supabase } from './lib/supabase';
 import { Navbar } from './components/Navbar';
@@ -174,10 +174,11 @@ export default function App() {
   const [sortBy, setSortBy] = useState<SortOption>('rating-desc');
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [mediaType, setMediaType] = useState<MediaType>('book');
-  const mediaLabel = mediaType === 'book' ? 'Books' : mediaType === 'movie' ? 'Movies' : 'Shows';
-  const watchedLabel = mediaType === 'book' ? 'Read' : 'Watched';
-  const activeLabel = mediaType === 'book' ? 'Active' : 'Watching';
+  const [mediaType, setMediaType] = useState<MediaTab>('book');
+  const mediaLabel = mediaType === 'all' ? 'Archive' : mediaType === 'book' ? 'Books' : mediaType === 'movie' ? 'Movies' : 'Shows';
+  const watchedLabel = mediaType === 'all' ? 'Read / Watched' : mediaType === 'book' ? 'Read' : 'Watched';
+  const activeLabel = mediaType === 'all' ? 'Active / Watching' : mediaType === 'book' ? 'Active' : 'Watching';
+  const isMediaMatch = (book: Book) => mediaType === 'all' || book.mediaType === mediaType;
 
   const visibleBooks = useMemo(() => {
     return books.flatMap((book) => {
@@ -199,7 +200,7 @@ export default function App() {
   // Extract all unique authors with counts for filter (e.g. "Adam Silvera (8)")
   const authorsWithCounts = useMemo(() => {
     const countsMap = new Map<string, number>();
-    visibleBooks.filter((book) => book.mediaType === mediaType).forEach((b) => {
+    visibleBooks.filter(isMediaMatch).forEach((b) => {
       if (b.author) {
         const name = b.author.trim();
         countsMap.set(name, (countsMap.get(name) || 0) + 1);
@@ -213,11 +214,11 @@ export default function App() {
   // Status counts for tabs
   const statusCounts = useMemo(() => {
     return {
-      all: visibleBooks.filter((b) => b.mediaType === mediaType).length,
-      read: visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'read').length,
-      reading: visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'reading').length,
-      'want-to-read': visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'want-to-read').length,
-      void: visibleBooks.filter((b) => b.mediaType === mediaType && b.status === 'void').length,
+      all: visibleBooks.filter(isMediaMatch).length,
+      read: visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'read').length,
+      reading: visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'reading').length,
+      'want-to-read': visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'want-to-read').length,
+      void: visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'void').length,
     };
   }, [visibleBooks, mediaType]);
 
@@ -225,7 +226,7 @@ export default function App() {
   const filteredAndSortedBooks = useMemo(() => {
     return visibleBooks
       .filter((book) => {
-        if (book.mediaType !== mediaType) return false;
+        if (!isMediaMatch(book)) return false;
         // Status filter
         if (statusFilter !== 'all' && book.status !== statusFilter) {
           return false;
@@ -263,7 +264,7 @@ export default function App() {
             return new Date(b.date).getTime() - new Date(a.date).getTime();
         }
       });
-  }, [books, statusFilter, selectedAuthor, searchQuery, sortBy]);
+  }, [visibleBooks, mediaType, statusFilter, selectedAuthor, searchQuery, sortBy]);
 
   // Overall average rating calculation
   const averageRating = useMemo(() => {
@@ -448,7 +449,7 @@ export default function App() {
       {view === 'book-detail' && selectedBook ? (
         <BookDetailPage
           book={selectedBook}
-          allBooks={visibleBooks.filter((item) => item.mediaType === mediaType)}
+          allBooks={visibleBooks.filter(isMediaMatch)}
           onBack={() => {
             setView('home');
             setSelectedBook(null);
@@ -473,7 +474,7 @@ export default function App() {
           {/* Filters & Sorting Bar */}
           <div id="bookshelf">
             <div className="media-tabs mb-3 sm:mb-4" role="tablist" aria-label="Archive type">
-              {(['book', 'movie', 'show'] as MediaType[]).map((type) => (
+              {(['all', 'book', 'movie', 'show'] as MediaTab[]).map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -482,8 +483,8 @@ export default function App() {
                   onClick={() => { setMediaType(type); setStatusFilter('all'); setSelectedAuthor('all'); }}
                   className={`media-tab ${mediaType === type ? 'media-tab-active' : ''}`}
                 >
-                  {type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
-                  <span>{visibleBooks.filter((book) => book.mediaType === type).length}</span>
+                  {type === 'all' ? 'All' : type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
+                  <span>{type === 'all' ? visibleBooks.length : visibleBooks.filter((book) => book.mediaType === type).length}</span>
                 </button>
               ))}
             </div>
@@ -560,7 +561,7 @@ export default function App() {
       <footer className="mt-auto h-14 border-t border-slate-200 bg-white shrink-0 flex items-center px-4 sm:px-8">
         <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">
-            {mediaLabel}: {visibleBooks.filter((book) => book.mediaType === mediaType).length} Titles | {watchedLabel}: {statusCounts.read} | {activeLabel}: {statusCounts.reading} | Wishlist: {statusCounts['want-to-read']}
+            {mediaLabel}: {visibleBooks.filter(isMediaMatch).length} Titles | {watchedLabel}: {statusCounts.read} | {activeLabel}: {statusCounts.reading} | Wishlist: {statusCounts['want-to-read']}
           </p>
 
           <div className="flex items-center gap-4 text-[10px]">

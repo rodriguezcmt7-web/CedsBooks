@@ -1,5 +1,5 @@
 import React from 'react';
-import { MediaType, ReadingStatus, SortOption } from '../types';
+import { MediaTab, ReadingStatus, SortOption } from '../types';
 import { Search, X } from 'lucide-react';
 
 export interface AuthorWithCount {
@@ -26,7 +26,7 @@ interface BookFiltersProps {
   };
   totalFilteredCount: number;
   onResetFilters: () => void;
-  mediaType: MediaType;
+  mediaType: MediaTab;
 }
 
 export const BookFilters: React.FC<BookFiltersProps> = ({
@@ -44,10 +44,12 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
   onResetFilters,
   mediaType,
 }) => {
-  const isVideo = mediaType !== 'book';
-  const personLabel = isVideo ? 'Director' : 'Author';
+  const isVideo = mediaType === 'movie' || mediaType === 'show';
+  const personLabel = isVideo ? 'Director' : mediaType === 'all' ? 'Person' : 'Author';
   const statusLabels = isVideo
     ? { read: 'Watched', reading: 'Watching', want: 'Want' }
+    : mediaType === 'all'
+    ? { read: 'Read / Watched', reading: 'Reading / Watching', want: 'Want' }
     : { read: 'Read', reading: 'Reading', want: 'Want' };
   const isFiltered =
     statusFilter !== 'all' ||

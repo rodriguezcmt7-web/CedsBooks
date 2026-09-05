@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Book, MediaType, ReadingStatus, StarDesignStyle, ThemeMode } from '../types';
+import { Book, MediaTab, MediaType, ReadingStatus, StarDesignStyle, ThemeMode } from '../types';
 import { ModernStars } from './ModernStars';
 import { BookEntryModal } from './BookEntryModal';
 import {
@@ -71,7 +71,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Search in Admin
   const [adminSearch, setAdminSearch] = useState('');
-  const [activeMediaType, setActiveMediaType] = useState<MediaType>('book');
+  const [activeMediaType, setActiveMediaType] = useState<MediaTab>('book');
 
   // Delete Confirmation modal
   const [deletingBook, setDeletingBook] = useState<Book | null>(null);
@@ -209,7 +209,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Filter books in admin list
   const filteredBooks = books.filter(
     (b) =>
-      (b.mediaType ?? 'book') === activeMediaType &&
+      (activeMediaType === 'all' || (b.mediaType ?? 'book') === activeMediaType) &&
       b.title.toLowerCase().includes(adminSearch.toLowerCase()) ||
       b.author.toLowerCase().includes(adminSearch.toLowerCase()) ||
       b.status.toLowerCase().includes(adminSearch.toLowerCase())
@@ -274,7 +274,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Media tabs */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 border-t border-slate-800/80 pt-1">
           <div className="flex overflow-x-auto gap-2">
-            {(['book', 'movie', 'show'] as MediaType[]).map((type) => (
+            {(['all', 'book', 'movie', 'show'] as MediaTab[]).map((type) => (
               <button
                 key={type}
                 type="button"
@@ -285,8 +285,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
                 }`}
               >
-                {type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
-                <span className="ml-1.5 opacity-70">({books.filter((book) => (book.mediaType ?? 'book') === type).length})</span>
+                {type === 'all' ? 'All' : type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
+                <span className="ml-1.5 opacity-70">({type === 'all' ? books.length : books.filter((book) => (book.mediaType ?? 'book') === type).length})</span>
               </button>
             ))}
           </div>
