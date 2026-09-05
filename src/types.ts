@@ -4,6 +4,11 @@ export type MediaTab = MediaType | 'all';
 export type CollectionFormat = 'physical' | 'ebook';
 export type ThemeMode = 'light' | 'dark';
 
+export interface MilestoneChallenge {
+  year: string;
+  goal: number;
+}
+
 export interface Book {
   id: string;
   title: string;
@@ -11,6 +16,7 @@ export interface Book {
   coverUrl: string;
   rating: number; // 1 to 5
   timesConsumed?: number;
+  isFavorite?: boolean;
   status: ReadingStatus;
   mediaType?: MediaType;
   format?: CollectionFormat;

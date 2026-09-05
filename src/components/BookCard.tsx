@@ -2,7 +2,7 @@ import React from 'react';
 import { Book, StarDesignStyle } from '../types';
 import { ModernStars } from './ModernStars';
 import { StatusBadge } from './StatusBadge';
-import { Calendar, Quote, ChevronRight, Star, Copy, Smartphone, BookOpen } from 'lucide-react';
+import { Calendar, Quote, ChevronRight, Star, Copy, Smartphone, BookOpen, Heart } from 'lucide-react';
 
 interface BookCardProps {
   book: Book;
@@ -10,6 +10,7 @@ interface BookCardProps {
   starStyle?: StarDesignStyle;
   isAdmin?: boolean;
   onQuickEdit?: (book: Book) => void;
+  onToggleFavorite?: (book: Book) => void;
 }
 
 export const BookCard: React.FC<BookCardProps> = ({
@@ -18,6 +19,7 @@ export const BookCard: React.FC<BookCardProps> = ({
   starStyle = 'modern-sharp',
   isAdmin = false,
   onQuickEdit,
+  onToggleFavorite,
 }) => {
   // Format date cleanly
   const formattedDate = (() => {
@@ -61,15 +63,31 @@ export const BookCard: React.FC<BookCardProps> = ({
           <StatusBadge status={book.status} mediaType={book.mediaType} size="sm" />
         </div>
 
+        {onToggleFavorite && (
+          <button
+            type="button"
+            aria-label={book.isFavorite ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`}
+            title={book.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            onClick={(event) => { event.stopPropagation(); onToggleFavorite(book); }}
+            className={`absolute top-10 sm:top-12 right-1.5 sm:right-3 z-20 p-1.5 rounded-full border shadow-xs transition-colors cursor-pointer ${
+              book.isFavorite ? 'bg-rose-500 text-white border-rose-400' : 'bg-white/95 text-slate-400 border-slate-100 hover:text-rose-500'
+            }`}
+          >
+            <Heart className="w-3.5 h-3.5" fill={book.isFavorite ? 'currentColor' : 'none'} />
+          </button>
+        )}
+
         {/* Rating overlay badge on top-left */}
         <div className="absolute top-1.5 sm:top-3 left-1.5 sm:left-3 z-10 bg-white/95 backdrop-blur-xs px-1.5 sm:px-2 py-0.5 rounded shadow-xs text-[9px] sm:text-[10px] font-bold text-slate-800 flex items-center gap-0.5 sm:gap-1 border border-slate-100">
           <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600 fill-blue-600" />
           <span>{book.rating}.0</span>
         </div>
-        <div className="absolute bottom-1.5 sm:bottom-3 left-1.5 sm:left-3 z-10 archive-label">
-          {book.format === 'ebook' ? <Smartphone className="w-2.5 h-2.5" /> : <BookOpen className="w-2.5 h-2.5" />}
-          <span>{book.format === 'ebook' ? 'E-book' : 'Physical'}</span>
-        </div>
+        {(!book.mediaType || book.mediaType === 'book') && (
+          <div className="absolute bottom-1.5 sm:bottom-3 left-1.5 sm:left-3 z-10 archive-label">
+            {book.format === 'ebook' ? <Smartphone className="w-2.5 h-2.5" /> : <BookOpen className="w-2.5 h-2.5" />}
+            <span>{book.format === 'ebook' ? 'E-book' : 'Physical'}</span>
+          </div>
+        )}
         {book.isDuplicate && (
           <div className="absolute bottom-1.5 sm:bottom-3 right-1.5 sm:right-3 z-10 archive-label">
             <Copy className="w-2.5 h-2.5" />
@@ -86,12 +104,12 @@ export const BookCard: React.FC<BookCardProps> = ({
             {book.title}
           </h3>
         </div>
-        <p className="text-[11px] sm:text-xs text-slate-500 mb-1.5 sm:mb-2.5 line-clamp-1">
+        <p className="text-[11px] sm:text-xs text-slate-500 text-center mb-1.5 sm:mb-2.5 line-clamp-1">
           {book.author}
         </p>
 
         {/* Modern Minimalist Star Rating */}
-        <div className="flex items-center gap-1 mb-1.5 sm:mb-3">
+        <div className="flex items-center justify-center gap-1 mb-1.5 sm:mb-3">
           <ModernStars
             rating={book.rating}
             size="xs"

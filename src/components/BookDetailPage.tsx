@@ -157,14 +157,16 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
                   <StatusBadge status={book.status} mediaType={book.mediaType} size="sm" />
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Edition</span>
-                  <span className="archive-inline-label">
-                    {book.format === 'ebook' ? <Smartphone className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
-                    {book.format === 'ebook' ? 'E-book' : 'Physical'}
-                    {book.isDuplicate ? <><Copy className="w-3 h-3 ml-1" /> Duplicate</> : null}
-                  </span>
-                </div>
+                {(!book.mediaType || book.mediaType === 'book') && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Edition</span>
+                    <span className="archive-inline-label">
+                      {book.format === 'ebook' ? <Smartphone className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
+                      {book.format === 'ebook' ? 'E-book' : 'Physical'}
+                      {book.isDuplicate ? <><Copy className="w-3 h-3 ml-1" /> Duplicate</> : null}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
                   <span className="text-slate-500 font-medium">Personal Rating</span>

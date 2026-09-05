@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Book, CollectionFormat, MediaTab, MediaType, ReadingStatus, SortOption, StarDesignStyle, ThemeMode } from './types';
+import { Book, CollectionFormat, MediaTab, MediaType, MilestoneChallenge, ReadingStatus, SortOption, StarDesignStyle, ThemeMode } from './types';
 import { INITIAL_BOOKS } from './data/initialBooks';
 import { supabase } from './lib/supabase';
 import { Navbar } from './components/Navbar';
@@ -28,6 +28,7 @@ const STORAGE_KEYS = {
   AUTH: 'personal_admin_auth_v1',
   STAR_STYLE: 'personal_star_style_v1',
   THEME: 'personal_theme_v1',
+  MILESTONE: 'personal_milestone_v1',
 };
 
 export default function App() {
@@ -71,6 +72,7 @@ export default function App() {
         coverUrl: String(book.cover_url ?? ''),
         rating: Number(book.rating ?? 0),
         timesConsumed: Number(book.times_consumed ?? 0),
+        isFavorite: Boolean(book.is_favorite),
         status: (book.status as ReadingStatus) ?? 'want-to-read',
         mediaType: (book.media_type as MediaType) ?? 'book',
         format: (book.format as CollectionFormat) ?? 'physical',
@@ -160,6 +162,24 @@ export default function App() {
     } catch {}
   }, [theme]);
 
+  const [milestone, setMilestone] = useState<MilestoneChallenge | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MILESTONE);
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as MilestoneChallenge;
+      return parsed && /^\d{4}$/.test(parsed.year) && parsed.goal > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (milestone) localStorage.setItem(STORAGE_KEYS.MILESTONE, JSON.stringify(milestone));
+      else localStorage.removeItem(STORAGE_KEYS.MILESTONE);
+    } catch {}
+  }, [milestone]);
+
   // --- Views and Modal States ---
   const [view, setView] = useState<'home' | 'book-detail' | 'admin'>('home');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -175,10 +195,12 @@ export default function App() {
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [mediaType, setMediaType] = useState<MediaTab>('book');
-  const mediaLabel = mediaType === 'all' ? 'Archive' : mediaType === 'book' ? 'Books' : mediaType === 'movie' ? 'Movies' : 'Shows';
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const mediaLabel = favoritesOnly ? 'Favorites' : mediaType === 'all' ? 'Archive' : mediaType === 'book' ? 'Books' : mediaType === 'movie' ? 'Movies' : 'Shows';
   const watchedLabel = mediaType === 'all' ? 'Read / Watched' : mediaType === 'book' ? 'Read' : 'Watched';
   const activeLabel = mediaType === 'all' ? 'Active / Watching' : mediaType === 'book' ? 'Active' : 'Watching';
   const isMediaMatch = (book: Book) => mediaType === 'all' || book.mediaType === mediaType;
+  const isInViewScope = (book: Book) => isMediaMatch(book) && (!favoritesOnly || book.isFavorite);
 
   const visibleBooks = useMemo(() => {
     return books.flatMap((book) => {
@@ -200,7 +222,7 @@ export default function App() {
   // Extract all unique authors with counts for filter (e.g. "Adam Silvera (8)")
   const authorsWithCounts = useMemo(() => {
     const countsMap = new Map<string, number>();
-    visibleBooks.filter(isMediaMatch).forEach((b) => {
+    visibleBooks.filter(isInViewScope).forEach((b) => {
       if (b.author) {
         const name = b.author.trim();
         countsMap.set(name, (countsMap.get(name) || 0) + 1);
@@ -209,24 +231,24 @@ export default function App() {
     return Array.from(countsMap.entries())
       .map(([author, count]) => ({ author, count }))
       .sort((a, b) => a.author.localeCompare(b.author));
-  }, [visibleBooks, mediaType]);
+  }, [visibleBooks, mediaType, favoritesOnly]);
 
   // Status counts for tabs
   const statusCounts = useMemo(() => {
     return {
-      all: visibleBooks.filter(isMediaMatch).length,
-      read: visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'read').length,
-      reading: visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'reading').length,
-      'want-to-read': visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'want-to-read').length,
-      void: visibleBooks.filter((b) => isMediaMatch(b) && b.status === 'void').length,
+      all: visibleBooks.filter(isInViewScope).length,
+      read: visibleBooks.filter((b) => isInViewScope(b) && b.status === 'read').length,
+      reading: visibleBooks.filter((b) => isInViewScope(b) && b.status === 'reading').length,
+      'want-to-read': visibleBooks.filter((b) => isInViewScope(b) && b.status === 'want-to-read').length,
+      void: visibleBooks.filter((b) => isInViewScope(b) && b.status === 'void').length,
     };
-  }, [visibleBooks, mediaType]);
+  }, [visibleBooks, mediaType, favoritesOnly]);
 
   // Combined Filtering & Sorting logic
   const filteredAndSortedBooks = useMemo(() => {
     return visibleBooks
       .filter((book) => {
-        if (!isMediaMatch(book)) return false;
+        if (!isInViewScope(book)) return false;
         // Status filter
         if (statusFilter !== 'all' && book.status !== statusFilter) {
           return false;
@@ -264,7 +286,7 @@ export default function App() {
             return new Date(b.date).getTime() - new Date(a.date).getTime();
         }
       });
-  }, [visibleBooks, mediaType, statusFilter, selectedAuthor, searchQuery, sortBy]);
+  }, [visibleBooks, mediaType, favoritesOnly, statusFilter, selectedAuthor, searchQuery, sortBy]);
 
   // Overall average rating calculation
   const averageRating = useMemo(() => {
@@ -339,6 +361,7 @@ export default function App() {
         media_type: savedBook.mediaType ?? 'book',
         format: savedBook.format ?? 'physical',
         has_duplicate: Boolean(savedBook.hasDuplicate),
+        is_favorite: Boolean(savedBook.isFavorite),
         review: savedBook.review ?? '',
         date: savedBook.date,
         date_started: savedBook.dateStarted ?? null,
@@ -368,6 +391,13 @@ export default function App() {
     if (selectedBook?.id === savedBook.id) {
       setSelectedBook(savedBook);
     }
+  };
+
+  const handleToggleFavorite = (book: Book) => {
+    const sourceId = book.duplicateOfId ?? book.id;
+    const sourceBook = books.find((entry) => entry.id === sourceId);
+    if (!sourceBook) return;
+    void handleSaveBook({ ...sourceBook, isFavorite: !sourceBook.isFavorite });
   };
 
   const handleDeleteBook = async (bookId: string) => {
@@ -415,6 +445,8 @@ export default function App() {
         initialEditingBook={editingBook}
         theme={theme}
         onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
+        milestone={milestone}
+        onSaveMilestone={setMilestone}
       />
     );
   }
@@ -449,7 +481,7 @@ export default function App() {
       {view === 'book-detail' && selectedBook ? (
         <BookDetailPage
           book={selectedBook}
-          allBooks={visibleBooks.filter(isMediaMatch)}
+          allBooks={visibleBooks.filter(isInViewScope)}
           onBack={() => {
             setView('home');
             setSelectedBook(null);
@@ -480,13 +512,23 @@ export default function App() {
                   type="button"
                   role="tab"
                   aria-selected={mediaType === type}
-                  onClick={() => { setMediaType(type); setStatusFilter('all'); setSelectedAuthor('all'); }}
+                  onClick={() => { setMediaType(type); setFavoritesOnly(false); setStatusFilter('all'); setSelectedAuthor('all'); }}
                   className={`media-tab ${mediaType === type ? 'media-tab-active' : ''}`}
                 >
                   {type === 'all' ? 'All' : type === 'book' ? 'Books' : type === 'movie' ? 'Movies' : 'Shows'}
                   <span>{type === 'all' ? visibleBooks.length : visibleBooks.filter((book) => book.mediaType === type).length}</span>
                 </button>
               ))}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={favoritesOnly}
+                onClick={() => { setMediaType('all'); setFavoritesOnly(true); setStatusFilter('all'); setSelectedAuthor('all'); }}
+                className={`media-tab ${favoritesOnly ? 'media-tab-active' : ''}`}
+              >
+                Favorites
+                <span>{visibleBooks.filter((book) => book.isFavorite).length}</span>
+              </button>
             </div>
             <BookFilters
               statusFilter={statusFilter}
@@ -550,6 +592,7 @@ export default function App() {
                   starStyle={starStyle}
                   isAdmin={isAdminAuthenticated}
                   onQuickEdit={handleQuickEditFromCard}
+                  onToggleFavorite={handleToggleFavorite}
                 />
               ))}
             </div>
@@ -561,7 +604,7 @@ export default function App() {
       <footer className="mt-auto h-14 border-t border-slate-200 bg-white shrink-0 flex items-center px-4 sm:px-8">
         <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">
-            {mediaLabel}: {visibleBooks.filter(isMediaMatch).length} Titles | {watchedLabel}: {statusCounts.read} | {activeLabel}: {statusCounts.reading} | Wishlist: {statusCounts['want-to-read']}
+            {mediaLabel}: {visibleBooks.filter(isInViewScope).length} Titles | {watchedLabel}: {statusCounts.read} | {activeLabel}: {statusCounts.reading} | Wishlist: {statusCounts['want-to-read']}
           </p>
 
           <div className="flex items-center gap-4 text-[10px]">

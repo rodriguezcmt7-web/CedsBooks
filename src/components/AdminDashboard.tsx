@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Book, MediaTab, MediaType, ReadingStatus, StarDesignStyle, ThemeMode } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Book, MediaTab, MediaType, MilestoneChallenge, ReadingStatus, StarDesignStyle, ThemeMode } from '../types';
 import { ModernStars } from './ModernStars';
 import { BookEntryModal } from './BookEntryModal';
 import {
@@ -44,6 +44,8 @@ interface AdminDashboardProps {
   initialTab?: 'collection' | 'settings';
   theme: ThemeMode;
   onToggleTheme: () => void;
+  milestone: MilestoneChallenge | null;
+  onSaveMilestone: (milestone: MilestoneChallenge | null) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -62,6 +64,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   initialTab = 'collection',
   theme,
   onToggleTheme,
+  milestone,
+  onSaveMilestone,
 }) => {
   const [activeTab, setActiveTab] = useState<'collection' | 'settings'>(initialTab);
 
@@ -72,6 +76,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Search in Admin
   const [adminSearch, setAdminSearch] = useState('');
   const [activeMediaType, setActiveMediaType] = useState<MediaTab>('book');
+  const [showMilestoneForm, setShowMilestoneForm] = useState(false);
+  const [milestoneYear, setMilestoneYear] = useState(milestone?.year ?? '');
+  const [milestoneGoal, setMilestoneGoal] = useState(String(milestone?.goal ?? ''));
 
   // Delete Confirmation modal
   const [deletingBook, setDeletingBook] = useState<Book | null>(null);
@@ -210,15 +217,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const filteredBooks = books.filter(
     (b) =>
       (activeMediaType === 'all' || (b.mediaType ?? 'book') === activeMediaType) &&
-      b.title.toLowerCase().includes(adminSearch.toLowerCase()) ||
-      b.author.toLowerCase().includes(adminSearch.toLowerCase()) ||
-      b.status.toLowerCase().includes(adminSearch.toLowerCase())
+      (
+        b.title.toLowerCase().includes(adminSearch.toLowerCase()) ||
+        b.author.toLowerCase().includes(adminSearch.toLowerCase()) ||
+        b.status.toLowerCase().includes(adminSearch.toLowerCase())
+      )
   );
 
+  const totalBooks = books.filter((b) => (b.mediaType ?? 'book') === 'book').length;
+  const totalMovies = books.filter((b) => b.mediaType === 'movie').length;
+  const totalShows = books.filter((b) => b.mediaType === 'show').length;
   const totalRead = books.filter((b) => b.status === 'read').length;
   const totalReading = books.filter((b) => b.status === 'reading').length;
   const totalWantToRead = books.filter((b) => b.status === 'want-to-read').length;
   const avgRating = books.length > 0 ? (books.reduce((acc, b) => acc + b.rating, 0) / books.length).toFixed(1) : '0.0';
+  const milestoneCount = milestone
+    ? books.filter((book) => (book.mediaType ?? 'book') === 'book' && book.date.startsWith(milestone.year)).length
+    : 0;
+  const milestonePairs = Math.floor(milestoneCount / 2);
+  const milestoneMessages = [
+    'My love, every book you finish proves how beautifully determined you are.',
+    'Two more books conquered, handsome. I am so proud of the way you keep growing.',
+    'You are building an incredible year one page at a time, and I love cheering you on.',
+    'Keep going, my love. Your curiosity and discipline make you truly inspiring.',
+    'Another pair complete. You can reach any goal you set your heart on.',
+  ];
+  const milestoneMessage = milestone
+    ? milestonePairs > 0
+      ? milestoneMessages[(milestonePairs - 1) % milestoneMessages.length]
+      : 'My love, your next great chapter starts with the very first book.'
+    : '';
+  const previousMilestoneKey = useRef<string | null>(null);
+  const previousMilestonePairs = useRef(0);
+  const [showMilestoneCelebration, setShowMilestoneCelebration] = useState(false);
+  const [celebrationKey, setCelebrationKey] = useState(0);
+
+  useEffect(() => {
+    const milestoneKey = milestone ? `${milestone.year}:${milestone.goal}` : null;
+    if (milestoneKey !== previousMilestoneKey.current) {
+      previousMilestoneKey.current = milestoneKey;
+      previousMilestonePairs.current = milestonePairs;
+      setShowMilestoneCelebration(false);
+      return;
+    }
+
+    if (milestone && milestonePairs > previousMilestonePairs.current) {
+      previousMilestonePairs.current = milestonePairs;
+      setCelebrationKey((current) => current + 1);
+      setShowMilestoneCelebration(true);
+      const timeout = window.setTimeout(() => setShowMilestoneCelebration(false), 2600);
+      return () => window.clearTimeout(timeout);
+    }
+
+    previousMilestonePairs.current = milestonePairs;
+  }, [milestone, milestonePairs]);
+
+  const handleSaveMilestone = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!/^\d{4}$/.test(milestoneYear) || Number(milestoneGoal) < 1) return;
+    onSaveMilestone({ year: milestoneYear, goal: Number(milestoneGoal) });
+    setShowMilestoneForm(false);
+    showNotification('Book milestone challenge saved.');
+  };
 
   return (
     <div className={`app-theme-${theme} star-surface min-h-screen text-slate-900 pb-16`}>
@@ -362,27 +422,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onClick={() => {
                   onDeleteBook(deletingBook.id);
                   setDeletingBook(null);
-                  showNotification('Book deleted.');
+                  showNotification('Entry deleted.');
                 }}
                 className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
               >
-                Delete Book
+                Delete Entry
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Reset Library Confirmation Modal */}
+      {/* Clear Archive Confirmation Modal */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-200">
             <div className="flex items-center gap-2.5 text-amber-600 mb-2">
               <RotateCcw className="w-5 h-5" />
-              <h4 className="text-base font-bold text-slate-900">Reset to Sample Books?</h4>
+              <h4 className="text-base font-bold text-slate-900">Clear Archive?</h4>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">
-              This will replace all your current book reviews with the 8 original curated sample books. Make sure you have exported a JSON backup if you wish to keep your edits.
+              This will remove all saved archive entries across Books, Movies, and Shows. Make sure you have exported a JSON backup if you want to keep your data.
             </p>
             <div className="flex items-center justify-end gap-2.5">
               <button
@@ -397,11 +457,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onClick={() => {
                   onResetBooks();
                   setShowResetConfirm(false);
-                  showNotification('Library reset to curated sample books!');
+                  showNotification('Archive cleared.');
                 }}
                 className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
               >
-                Reset Library
+                Clear Archive
               </button>
             </div>
           </div>
@@ -436,6 +496,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             ========================================================================= */}
         {activeTab === 'collection' && (
           <div className="space-y-5">
+            {milestone && (
+              <section className="milestone-card" aria-label="Book milestone challenge">
+                {showMilestoneCelebration && (
+                  <div key={celebrationKey} className="milestone-confetti" aria-hidden="true">
+                    {Array.from({ length: 18 }, (_, index) => <span key={index} style={{ '--confetti-index': index } as React.CSSProperties} />)}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-300" />
+                    <h2 className="text-sm sm:text-base font-bold text-white font-serif-title">Book Milestone Challenge</h2>
+                  </div>
+                  <p className="text-xs text-blue-100/80 mt-1">Only book entries recorded in {milestone.year} count toward this challenge.</p>
+                  <p className="milestone-message">{milestoneMessage}</p>
+                </div>
+                <div className="milestone-progress">
+                  <strong>{Math.min(milestoneCount, milestone.goal)}</strong>
+                  <span>/ {milestone.goal} books</span>
+                </div>
+                <div className="milestone-track"><span style={{ width: `${Math.min(100, (milestoneCount / milestone.goal) * 100)}%` }} /></div>
+                <button type="button" className="milestone-edit" onClick={() => { setMilestoneYear(milestone.year); setMilestoneGoal(String(milestone.goal)); setShowMilestoneForm(true); }}>Edit Challenge</button>
+              </section>
+            )}
             {/* Top Control Bar with Search & Add Entry Button */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs">
               <div>
@@ -463,6 +546,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <button
                   type="button"
+                  onClick={() => setShowMilestoneForm(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{milestone ? 'Milestone' : 'Add Milestone Challenge'}</span>
+                </button>
+
+                <button
+                  type="button"
                   id="admin-add-new-book-btn"
                   onClick={handleOpenAddModal}
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
@@ -472,6 +564,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
               </div>
             </div>
+
+            {showMilestoneForm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+                <form onSubmit={handleSaveMilestone} className="w-full max-w-md bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-serif-title">Add Milestone Challenge</h3>
+                    <p className="text-xs text-slate-500 mt-1">This challenge counts books only, using their recorded year.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="text-xs font-semibold text-slate-700">Goal year
+                      <input required pattern="[0-9]{4}" maxLength={4} value={milestoneYear} onChange={(e) => setMilestoneYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="2026" className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">Books to read
+                      <input required type="number" min="1" step="1" value={milestoneGoal} onChange={(e) => setMilestoneGoal(e.target.value)} placeholder="300" className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" />
+                    </label>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    {milestone && <button type="button" onClick={() => { onSaveMilestone(null); setShowMilestoneForm(false); }} className="text-xs font-semibold text-red-600 hover:underline">Remove Challenge</button>}
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button type="button" onClick={() => setShowMilestoneForm(false)} className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">Cancel</button>
+                      <button type="submit" className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold">Save Challenge</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {/* Books Management Table */}
             <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -577,7 +695,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 id={`admin-delete-${book.id}`}
                                 onClick={() => setDeletingBook(book)}
                                 className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                title="Delete book"
+                                title="Delete entry"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -606,7 +724,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </h2>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Manage your admin passkey, data backups, and collection settings.
+                Manage security, archive preferences, backups, and the book milestone challenge.
               </p>
             </div>
 
@@ -614,31 +732,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
-                  Total Reviews
+                  Total Entries
                 </span>
                 <div className="text-xl font-bold font-mono text-slate-900">{books.length}</div>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
-                  Finished
+                  Books
                 </span>
-                <div className="text-xl font-bold font-mono text-blue-600">{totalRead}</div>
+                <div className="text-xl font-bold font-mono text-blue-600">{totalBooks}</div>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
-                  Currently Reading
+                  Movies
                 </span>
-                <div className="text-xl font-bold font-mono text-orange-500">{totalReading}</div>
+                <div className="text-xl font-bold font-mono text-orange-500">{totalMovies}</div>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
-                  Average Rating
+                  Shows
                 </span>
                 <div className="text-xl font-bold font-mono text-slate-900">
-                  {avgRating} / 5
+                  {totalShows}
                 </div>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-4">
+                <h3 className="text-sm font-bold text-slate-900 font-serif-title">Archive Status</h3>
+                <p className="text-[11px] text-slate-500 mt-1">A live summary across every media type.</p>
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                  <div className="rounded-lg bg-blue-50 p-2"><strong className="block text-lg font-mono text-blue-600">{totalRead}</strong><span className="text-[10px] font-semibold text-slate-500">Read / Watched</span></div>
+                  <div className="rounded-lg bg-orange-50 p-2"><strong className="block text-lg font-mono text-orange-500">{totalReading}</strong><span className="text-[10px] font-semibold text-slate-500">Reading / Watching</span></div>
+                  <div className="rounded-lg bg-slate-100 p-2"><strong className="block text-lg font-mono text-slate-700">{totalWantToRead}</strong><span className="text-[10px] font-semibold text-slate-500">Want</span></div>
+                </div>
+              </div>
+
+            </div>
+
+            {milestone && (
+              <div className="bg-white rounded-xl border border-blue-200 shadow-xs p-4 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 font-serif-title">Book Milestone: {milestone.year}</h3>
+                  <p className="text-[11px] text-slate-500 mt-1">{milestoneCount} of {milestone.goal} books recorded for this year.</p>
+                </div>
+                <button type="button" onClick={() => { setActiveTab('collection'); setShowMilestoneForm(true); setMilestoneYear(milestone.year); setMilestoneGoal(String(milestone.goal)); }} className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">Edit Milestone</button>
+              </div>
+            )}
 
             {/* 1. Admin Passkey & Security Card */}
             <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
@@ -751,10 +892,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 font-serif-title">
-                    Collection Data & Backups
+                    Archive Data & Backups
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Export your collection, import from a JSON backup, or reset to original sample books.
+                    Export, import, or clear your current archive entries.
                   </p>
                 </div>
               </div>
@@ -768,7 +909,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span>Export Collection</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Download a complete JSON backup of all {books.length} reviews and quotes.
+                      Download a complete JSON backup of all {books.length} archive entries.
                     </p>
                   </div>
                   <button
@@ -789,7 +930,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span>Import Collection</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Restore or replace your reviews from a previously exported JSON file.
+                      Restore or replace your archive entries from a previously exported JSON file.
                     </p>
                   </div>
                   <button
@@ -807,10 +948,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-1">
                       <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Sample Reset</span>
+                      <span>Clear Archive</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Reset your library back to the original 8 curated book reviews.
+                      Clear the archive and start again with no saved entries. Export a backup first if you want to keep your data.
                     </p>
                   </div>
                   <button
@@ -819,7 +960,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-200 hover:bg-amber-50 text-amber-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Reset to Sample</span>
+                    <span>Clear Archive</span>
                   </button>
                 </div>
               </div>

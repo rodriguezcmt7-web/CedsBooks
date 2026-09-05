@@ -63,7 +63,7 @@ const DatePartsFields: React.FC<DatePartsFieldsProps> = ({
           onChange={(e) => onYearChange(e.target.value)}
           className={selectClass}
         >
-          <option value=""></option>
+          <option value="">Year</option>
           {years.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
         <select
@@ -73,7 +73,7 @@ const DatePartsFields: React.FC<DatePartsFieldsProps> = ({
           onChange={(e) => onMonthChange(e.target.value)}
           className={selectClass}
         >
-          <option value=""></option>
+          <option value="">Month</option>
           {months.map(([value, name]) => <option key={value} value={value}>{name}</option>)}
         </select>
         <select
@@ -83,7 +83,7 @@ const DatePartsFields: React.FC<DatePartsFieldsProps> = ({
           onChange={(e) => onDayChange(e.target.value)}
           className={selectClass}
         >
-          <option value=""></option>
+          <option value="">Day</option>
           {days.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
       </div>
@@ -244,6 +244,7 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
       rating,
       status,
       timesConsumed: Math.max(0, timesConsumed || 0),
+      isFavorite: bookToEdit?.isFavorite ?? false,
       mediaType,
       format,
       hasDuplicate,
@@ -440,7 +441,7 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-slate-700">
-                  Rating: <span className="text-blue-600 font-mono font-bold">{rating} / 5</span>
+                  Rating: <span className="text-blue-600 font-mono font-bold">{rating.toFixed(1)} / 5</span>
                 </label>
                 <span className="text-[10px] text-slate-400">Click stars to rate</span>
               </div>
@@ -452,9 +453,15 @@ export const BookEntryModal: React.FC<BookEntryModalProps> = ({
                   styleVariant={starStyle}
                   onChange={(newRating) => setRating(newRating)}
                 />
-                <span className="text-xs font-bold text-slate-700 font-mono ml-auto">
-                  {rating}.0 / 5
-                </span>
+                <button
+                  type="button"
+                  className="text-xs font-bold text-slate-700 font-mono ml-auto rounded px-1.5 py-1 hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                  onClick={() => setRating((current) => (current >= 5 ? 0 : current + 0.5))}
+                  aria-label="Increase rating by half a star"
+                  title="Click to increase by half a star"
+                >
+                  {rating.toFixed(1)} / 5
+                </button>
               </div>
             </div>
           </div>
